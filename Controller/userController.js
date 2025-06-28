@@ -84,7 +84,8 @@ const addToCart = async (req, res) => {
             if (itemIndex > -1) {
                 // Product exists, update quantity
                 cart.items[itemIndex].quantity = quantity;
-            } else {
+            }
+            else {
                 // Product does not exist, add to cart
                 cart.items.push({ product, quantity });
             }
