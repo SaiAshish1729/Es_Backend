@@ -83,7 +83,7 @@ const addToCart = async (req, res) => {
 
             if (itemIndex > -1) {
                 // Product exists, update quantity
-                cart.items[itemIndex].quantity += quantity;
+                cart.items[itemIndex].quantity = quantity;
             } else {
                 // Product does not exist, add to cart
                 cart.items.push({ product, quantity });
@@ -98,10 +98,26 @@ const addToCart = async (req, res) => {
         return res.status(500).json({ message: 'Server error while adding item to cart.', error });
     }
 };
+const fetchMyCart = async (req, res) => {
+    try {
+        const userId = req.user._id;
+        let cart = await Cart.findOne({ user: userId });
+        if (!cart) {
+            return res.status(404).send({ message: "There is nothing to show in your cart." })
+        }
+        return res.status(200).json({ success: true, message: 'Cart items fetched successfully', cart });
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({ message: 'Server error while fetching cart.', error });
+    }
+}
+
+
 module.exports = {
     userRegistration,
     userLogin,
     loggedInUserProfile,
     addToCart,
+    fetchMyCart,
 
 }
