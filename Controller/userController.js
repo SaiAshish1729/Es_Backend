@@ -98,50 +98,6 @@ const addToCart = async (req, res) => {
         return res.status(500).json({ message: 'Server error while adding item to cart.', error });
     }
 };
-// const fetchMyCart = async (req, res) => {
-//     try {
-//         const userId = req.user._id;
-//         let cart = await Cart.findOne({ user: userId });
-//         if (!cart) {
-//             return res.status(404).send({ message: "There is nothing to show in your cart." })
-//         }
-//         return res.status(200).json({ success: true, message: 'Cart items fetched successfully', cart });
-//     } catch (error) {
-//         console.log(error);
-//         return res.status(500).json({ message: 'Server error while fetching cart.', error });
-//     }
-// }
-
-// const fetchMyCart = async (req, res) => {
-//     try {
-//         const userId = req.user._id;
-
-//         // Populate product to access prices
-//         let cart = await Cart.findOne({ user: userId }).populate("items.product");
-
-//         if (!cart || cart.items.length === 0) {
-//             return res.status(404).send({ message: "There is nothing to show in your cart." });
-//         }
-
-//         // Calculate total price
-//         let total_pay_price = 0;
-//         cart.items.forEach(item => {
-//             const price = item.product?.price || 0;
-//             total_pay_price += price * item.quantity;
-//         });
-
-//         return res.status(200).json({
-//             success: true,
-//             message: 'Cart items fetched successfully',
-//             cart,
-//             total_pay_price
-//         });
-
-//     } catch (error) {
-//         console.log(error);
-//         return res.status(500).json({ message: 'Server error while fetching cart.', error });
-//     }
-// };
 
 const fetchMyCart = async (req, res) => {
     try {
@@ -211,6 +167,24 @@ const removeFromCart = async (req, res) => {
     }
 };
 
+const singleProductPurchase = async (req, res) => {
+    try {
+        const user = req.user;
+        const productId = req.params.productId;
+        const productExists = await Product.findOne({ _id: productId });
+        console.log(productExists)
+        if (!productExists) {
+            return res.status(400).send({ message: "This product no longer available" })
+        }
+        if (productExists.countInStock < 1) {
+            return res.status(401).json({ message: "This product is currently unavailable in stock." })
+        }
+        return res.status(200).json({ success: true })
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({ message: 'Server error while purchasing a product', error });
+    }
+}
 
 module.exports = {
     userRegistration,
@@ -219,4 +193,5 @@ module.exports = {
     addToCart,
     fetchMyCart,
     removeFromCart,
+    singleProductPurchase,
 }
