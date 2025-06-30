@@ -8,12 +8,11 @@ const Connection = require('../DB/Connection');
 const seedAdmin = async () => {
     try {
         Connection();
-
-        const hashedPassword = await bcrypt.hash(process.env.ADMIN_EMAIL, 10);
+        const hashedPassword = await bcrypt.hash(process.env.ADMIN_PASSWORD, 10);
 
         const admin = User({
             name: 'Super Admin',
-            email: 'admin@example.com',
+            email: process.env.ADMIN_EMAIL,
             password: hashedPassword,
             role: 'admin',
         });

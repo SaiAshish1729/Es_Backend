@@ -61,7 +61,7 @@ const addToCart = async (req, res) => {
     try {
         const userId = req.user._id;
         const { product, quantity } = req.body;
-        if (!product || !quantity || quantity < 1) {
+        if (!product || quantity === undefined || quantity === null) {
             return res.status(400).json({ message: 'Product and valid quantity are required.' });
         }
 
@@ -71,22 +71,21 @@ const addToCart = async (req, res) => {
         }
 
         let cart = await Cart.findOne({ user: userId });
-
         if (!cart) {
             cart = new Cart({
                 user: userId,
                 items: [{ product, quantity }]
             });
         } else {
-            // Check if the product already exists in the cart
             const itemIndex = cart.items.findIndex(item => item.product.toString() === product);
-
             if (itemIndex > -1) {
-                // Product exists, update quantity
-                cart.items[itemIndex].quantity = quantity;
+                if (quantity === 0) {
+                    cart.items.splice(itemIndex, 1);
+                } else {
+                    cart.items[itemIndex].quantity = quantity;
+                }
             }
             else {
-                // Product does not exist, add to cart
                 cart.items.push({ product, quantity });
             }
         }
@@ -99,19 +98,118 @@ const addToCart = async (req, res) => {
         return res.status(500).json({ message: 'Server error while adding item to cart.', error });
     }
 };
+// const fetchMyCart = async (req, res) => {
+//     try {
+//         const userId = req.user._id;
+//         let cart = await Cart.findOne({ user: userId });
+//         if (!cart) {
+//             return res.status(404).send({ message: "There is nothing to show in your cart." })
+//         }
+//         return res.status(200).json({ success: true, message: 'Cart items fetched successfully', cart });
+//     } catch (error) {
+//         console.log(error);
+//         return res.status(500).json({ message: 'Server error while fetching cart.', error });
+//     }
+// }
+
+// const fetchMyCart = async (req, res) => {
+//     try {
+//         const userId = req.user._id;
+
+//         // Populate product to access prices
+//         let cart = await Cart.findOne({ user: userId }).populate("items.product");
+
+//         if (!cart || cart.items.length === 0) {
+//             return res.status(404).send({ message: "There is nothing to show in your cart." });
+//         }
+
+//         // Calculate total price
+//         let total_pay_price = 0;
+//         cart.items.forEach(item => {
+//             const price = item.product?.price || 0;
+//             total_pay_price += price * item.quantity;
+//         });
+
+//         return res.status(200).json({
+//             success: true,
+//             message: 'Cart items fetched successfully',
+//             cart,
+//             total_pay_price
+//         });
+
+//     } catch (error) {
+//         console.log(error);
+//         return res.status(500).json({ message: 'Server error while fetching cart.', error });
+//     }
+// };
+
 const fetchMyCart = async (req, res) => {
     try {
         const userId = req.user._id;
-        let cart = await Cart.findOne({ user: userId });
-        if (!cart) {
-            return res.status(404).send({ message: "There is nothing to show in your cart." })
+
+        let cart = await Cart.findOne({ user: userId }).populate("items.product");
+
+        if (!cart || cart.items.length === 0) {
+            return res.status(404).send({ message: "There is nothing to show in your cart." });
         }
-        return res.status(200).json({ success: true, message: 'Cart items fetched successfully', cart });
+
+        let total_pay_price = 0;
+
+        // Convert cart to plain object
+        const cartObj = cart.toObject();
+
+        // Process each cart item
+        cartObj.items.forEach(item => {
+            const product = item.product;
+            if (product?.price && item.quantity) {
+                total_pay_price += product.price * item.quantity;
+            }
+
+            // Remove unwanted fields like 'reviews'
+            if (product?.reviews !== undefined) {
+                delete product.reviews;
+            }
+        });
+
+        return res.status(200).json({
+            success: true,
+            message: 'Cart items fetched successfully',
+            cart: cartObj,
+            total_pay_price
+        });
+
     } catch (error) {
-        console.log(error);
+        console.error(error);
         return res.status(500).json({ message: 'Server error while fetching cart.', error });
     }
-}
+};
+
+const removeFromCart = async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const productId = req.params.productId;
+
+        let cart = await Cart.findOne({ user: userId });
+        if (!cart) {
+            return res.status(404).json({ message: 'Cart not found' });
+        }
+
+        const itemIndex = cart.items.findIndex(item => item.product.toString() === productId);
+        if (itemIndex === -1) {
+            return res.status(404).json({ message: 'Product not found in cart' });
+        }
+
+        // Remove item from array
+        cart.items.splice(itemIndex, 1);
+
+        await cart.save();
+        return res.status(200).json({ success: true, message: 'Item removed from cart', cart });
+
+    } catch (error) {
+        console.error('Remove from cart error:', error);
+        return res.status(500).json({ message: 'Server error while removing item from cart', error });
+    }
+};
 
 
 module.exports = {
@@ -120,5 +218,5 @@ module.exports = {
     loggedInUserProfile,
     addToCart,
     fetchMyCart,
-
+    removeFromCart,
 }

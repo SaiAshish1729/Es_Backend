@@ -66,6 +66,9 @@ const getAllProducts = async (req, res) => {
 const getProductById = async (req, res) => {
     try {
         const { product_id } = req.query;
+        if (!product_id) {
+            return res.status(400).json({ message: "product_id is missing." });
+        }
         const product = await Product.findById({ _id: product_id }).populate('category', 'name');
         if (!product) {
             return res.status(404).json({ success: false, message: "Product not found." });
